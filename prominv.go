@@ -93,7 +93,7 @@ func makeInventory() {
 			continue
 		}
 		instanceEscaped := strings.Replace(instance, ".", "\\.", -1)
-		inventory, err = sjson.Set(inventory, "all.prometheus.-1", instanceEscaped)
+		inventory, err = sjson.Set(inventory, "prometheus.hosts.-1", instance)
 		if err != nil {
 			log.Fatal(err)
 		}
