@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"gitlab/prominv/children"
 	"gitlab/prominv/config"
 	"log"
 	"os"
@@ -23,11 +24,6 @@ const (
 var (
 	flags *config.Flags
 )
-
-type InventoryItem struct {
-	App string `json:"app"`
-	Env string `json:"env"`
-}
 
 func kvExtract(result string) map[string]string {
 	openCurly := strings.SplitN(result, "{", 2)[1]
@@ -70,6 +66,7 @@ func runPromQL(query string) []model.LabelSet {
 }
 
 func makeInventory() {
+	children := children.NewChildren()
 	lbls := runPromQL(PromQL)
 	var err error
 	inventory := "{}"
@@ -81,9 +78,16 @@ func makeInventory() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	inventory, err = sjson.Set(inventory, "all.children.-1", "prometheus")
-	if err != nil {
-		log.Fatal(err)
+	// Add the wanted child groups to children list
+	for _, cg := range []string{"prometheus", "prod", "dev"} {
+		inventory, err = sjson.Set(inventory, "all.children.-1", cg)
+		if err != nil {
+			log.Fatalf("Failed to add child \"%s\" to inventory: %v", cg, err)
+		}
+		err = children.AddChild(cg)
+		if err != nil {
+			log.Fatalf("Unable to create child \"%s\": %v", cg, err)
+		}
 	}
 	for _, lbl := range lbls {
 		labels := kvExtract(lbl.String())
@@ -92,16 +96,44 @@ func makeInventory() {
 			//log.Fatalf("Instance:%s has no instance label", labels["__name__"])
 			continue
 		}
+		if env, ok := labels["env"]; ok {
+			if env == "prod" {
+				err := children.AddMember("prod", instance)
+				if err != nil {
+					log.Fatalf("Failed to add %s to the \"prod\" group: %v", instance, err)
+				}
+			}
+			if env == "dev" {
+				err = children.AddMember("dev", instance)
+				if err != nil {
+					log.Fatalf("Failed to add %s to the \"dev\" group: %v", instance, err)
+				}
+			}
+		}
 		instanceEscaped := strings.Replace(instance, ".", "\\.", -1)
-		inventory, err = sjson.Set(inventory, "prometheus.hosts.-1", instance)
+		// All instances get added to the prometheus child group
+		children.AddMember("prometheus", instance)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Failed to add %s to the \"prometheus\" group: %v", instance, err)
 		}
 		// Delete labels that we don't want to appear within the hostvars map
 		delete(labels, "instance")
 		delete(labels, "__name__")
 		hostvarsKey := fmt.Sprintf("_meta.hostvars.%s", instanceEscaped)
 		inventory, err = sjson.Set(inventory, hostvarsKey, labels)
+	}
+
+	// Iterate over the child groups and add the members to them
+	for _, childName := range children.GetAllChildren() {
+		members, err := children.MemberSlice(childName)
+		if err != nil {
+			log.Fatalf("Failed to generate member slice for \"%s\": %v", childName, err)
+		}
+		sjKey := fmt.Sprintf("%s.hosts", childName)
+		inventory, err = sjson.Set(inventory, sjKey, members)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	fmt.Println(inventory)
 }
