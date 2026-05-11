@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"gitlab/promquery/config"
+	"gitlab/prominv/config"
 	"log"
 	"os"
 	"strings"
@@ -77,7 +77,11 @@ func makeInventory() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	inventory, err = sjson.Set(inventory, "all", "hosts:[]")
+	inventory, err = sjson.Set(inventory, "all", "children:[]")
+	if err != nil {
+		log.Fatal(err)
+	}
+	inventory, err = sjson.Set(inventory, "all.children.-1", "prometheus")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -89,7 +93,7 @@ func makeInventory() {
 			continue
 		}
 		instanceEscaped := strings.Replace(instance, ".", "\\.", -1)
-		inventory, err = sjson.Set(inventory, "all.hosts.-1", instanceEscaped)
+		inventory, err = sjson.Set(inventory, "all.prometheus.-1", instanceEscaped)
 		if err != nil {
 			log.Fatal(err)
 		}

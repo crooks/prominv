@@ -1,4 +1,4 @@
-module gitlab/promquery
+module gitlab/prominv
 
 go 1.25.4
 
