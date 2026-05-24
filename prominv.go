@@ -25,18 +25,6 @@ var (
 	flags *config.Flags
 )
 
-func kvExtract(result string) map[string]string {
-	openCurly := strings.SplitN(result, "{", 2)[1]
-	closeCurly := strings.SplitN(openCurly, "}", 2)[0]
-	labelPairs := strings.Split(closeCurly, ",")
-	labels := make(map[string]string)
-	for _, l := range labelPairs {
-		kv := strings.SplitN(strings.Trim(l, " "), "=", 2)
-		labels[kv[0]] = strings.Trim(kv[1], "\"")
-	}
-	return labels
-}
-
 // newAPI returns a new instance of the Prometheus v1 API
 func newAPI() v1.API {
 	client, err := api.NewClient(api.Config{
@@ -50,11 +38,11 @@ func newAPI() v1.API {
 	return v1.NewAPI(client)
 }
 
-func runPromQL(query string) []model.LabelSet {
+func runPromQL(query string) model.Vector {
 	v1api := newAPI()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	lbls, warnings, err := v1api.Series(ctx, []string{query}, time.Now().Add(-time.Hour), time.Now())
+	result, warnings, err := v1api.Query(ctx, query, time.Now())
 	if err != nil {
 		fmt.Printf("Error querying Prometheus: %v\n", err)
 		os.Exit(1)
@@ -62,12 +50,14 @@ func runPromQL(query string) []model.LabelSet {
 	if len(warnings) > 0 {
 		fmt.Printf("Warnings: %v\n", warnings)
 	}
-	return lbls
+	if result.Type() != model.ValVector {
+		log.Fatal("Not a vector result")
+	}
+	return result.(model.Vector)
 }
 
 func makeInventory() {
 	children := children.NewChildren()
-	lbls := runPromQL(PromQL)
 	var err error
 	inventory := "{}"
 	inventory, err = sjson.Set(inventory, "_meta", "hostvars")
@@ -79,7 +69,7 @@ func makeInventory() {
 		log.Fatal(err)
 	}
 	// Add the wanted child groups to children list
-	for _, cg := range []string{"prometheus", "prod", "dev"} {
+	for _, cg := range []string{"prometheus", "prod", "dev", "up"} {
 		inventory, err = sjson.Set(inventory, "all.children.-1", cg)
 		if err != nil {
 			log.Fatalf("Failed to add child \"%s\" to inventory: %v", cg, err)
@@ -89,13 +79,22 @@ func makeInventory() {
 			log.Fatalf("Unable to create child \"%s\": %v", cg, err)
 		}
 	}
-	for _, lbl := range lbls {
-		labels := kvExtract(lbl.String())
-		instance, ok := labels["instance"]
+	results := runPromQL(PromQL)
+	// Iterate over the returned metrics
+	for _, result := range results {
+		labels := result.Metric
+		_, ok := labels["instance"]
 		if !ok {
 			//log.Fatalf("Instance:%s has no instance label", labels["__name__"])
 			continue
 		}
+		instance := string(labels["instance"])
+		// All instances get added to the prometheus child group
+		children.AddMember("prometheus", instance)
+		if err != nil {
+			log.Fatalf("Failed to add %s to the \"prometheus\" group: %v", instance, err)
+		}
+		// If there's an "env" label, populate the prod/dev inventory groups
 		if env, ok := labels["env"]; ok {
 			if env == "prod" {
 				err := children.AddMember("prod", instance)
@@ -110,12 +109,15 @@ func makeInventory() {
 				}
 			}
 		}
-		instanceEscaped := strings.Replace(instance, ".", "\\.", -1)
-		// All instances get added to the prometheus child group
-		children.AddMember("prometheus", instance)
-		if err != nil {
-			log.Fatalf("Failed to add %s to the \"prometheus\" group: %v", instance, err)
+		// This conditional populates an "up" child group if the value of the "up" metric is 1.
+		if int(result.Value) == 1 {
+			err = children.AddMember("up", instance)
+			if err != nil {
+				log.Fatalf("Failed to add %s to the \"up\" group: %v", instance, err)
+			}
 		}
+
+		instanceEscaped := strings.Replace(instance, ".", "\\.", -1)
 		// Delete labels that we don't want to appear within the hostvars map
 		delete(labels, "instance")
 		delete(labels, "__name__")
