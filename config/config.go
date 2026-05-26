@@ -67,7 +67,7 @@ func getCfgItem(flagVal, envName, cfgVal, defaultVal string) string {
 }
 
 func GetConfigFilename() string {
-	filename := getCfgItem(flags.Config, "PROMINVCFG", "", "")
+	filename := getCfgItem(flags.Config, "PROMINVCFG", "", defaultConfig)
 	return filename
 }
 
