@@ -16,19 +16,14 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-const (
-	PrometheusURL = "http://plosysmon02.westernpower.co.uk:9090"
-	PromQL        = "up{job=\"node_exporter\"}"
-)
-
 var (
-	flags *config.Flags
+	cfg *config.Config
 )
 
 // newAPI returns a new instance of the Prometheus v1 API
 func newAPI() v1.API {
 	client, err := api.NewClient(api.Config{
-		Address: PrometheusURL,
+		Address: cfg.URL,
 	})
 	if err != nil {
 		fmt.Printf("Error creating client: %v\n", err)
@@ -44,7 +39,7 @@ func runPromQL(query string) model.Vector {
 	defer cancel()
 	result, warnings, err := v1api.Query(ctx, query, time.Now())
 	if err != nil {
-		fmt.Printf("Error querying Prometheus: %v\n", err)
+		fmt.Printf("Error querying Prometheus at %s: %v\n", cfg.URL, err)
 		os.Exit(1)
 	}
 	if len(warnings) > 0 {
@@ -79,7 +74,7 @@ func makeInventory() {
 			log.Fatalf("Unable to create child \"%s\": %v", cg, err)
 		}
 	}
-	results := runPromQL(PromQL)
+	results := runPromQL(cfg.Query)
 	// Iterate over the returned metrics
 	for _, result := range results {
 		labels := result.Metric
@@ -141,8 +136,16 @@ func makeInventory() {
 }
 
 func main() {
-	flags = config.ParseFlags()
-	if flags.List {
+	var err error
+	// The config file can only be defined via a command line flag or an Environment Variable.
+	cfgFilename := config.GetConfigFilename()
+	cfg, err = config.ParseConfig(cfgFilename)
+	if err != nil {
+		log.Fatalf("Cannot parse config: %v", err)
+	}
+	if config.DoList() {
 		makeInventory()
+	} else {
+		fmt.Printf("%+v\n", cfg)
 	}
 }
