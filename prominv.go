@@ -59,20 +59,9 @@ func makeInventory() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	inventory, err = sjson.Set(inventory, "all", "children:[]")
+	inventory, err = sjson.Set(inventory, "all", "children")
 	if err != nil {
 		log.Fatal(err)
-	}
-	// Add the wanted child groups to children list
-	for _, cg := range []string{"prometheus", "prod", "dev", "up"} {
-		inventory, err = sjson.Set(inventory, "all.children.-1", cg)
-		if err != nil {
-			log.Fatalf("Failed to add child \"%s\" to inventory: %v", cg, err)
-		}
-		err = children.AddChild(cg)
-		if err != nil {
-			log.Fatalf("Unable to create child \"%s\": %v", cg, err)
-		}
 	}
 	results := runPromQL(cfg.Query)
 	// Iterate over the returned metrics
@@ -92,24 +81,15 @@ func makeInventory() {
 		// If there's an "env" label, populate the prod/dev inventory groups
 		if env, ok := labels["env"]; ok {
 			if env == "prod" {
-				err := children.AddMember("prod", instance)
-				if err != nil {
-					log.Fatalf("Failed to add %s to the \"prod\" group: %v", instance, err)
-				}
+				children.AddMember("prod", instance)
 			}
 			if env == "dev" {
-				err = children.AddMember("dev", instance)
-				if err != nil {
-					log.Fatalf("Failed to add %s to the \"dev\" group: %v", instance, err)
-				}
+				children.AddMember("dev", instance)
 			}
 		}
 		// This conditional populates an "up" child group if the value of the "up" metric is 1.
 		if int(result.Value) == 1 {
-			err = children.AddMember("up", instance)
-			if err != nil {
-				log.Fatalf("Failed to add %s to the \"up\" group: %v", instance, err)
-			}
+			children.AddMember("up", instance)
 		}
 
 		instanceEscaped := strings.Replace(instance, ".", "\\.", -1)
@@ -120,8 +100,10 @@ func makeInventory() {
 		inventory, err = sjson.Set(inventory, hostvarsKey, labels)
 	}
 
+	allChildren := children.GetAllChildren()
+	inventory, err = sjson.Set(inventory, "all.children", allChildren)
 	// Iterate over the child groups and add the members to them
-	for _, childName := range children.GetAllChildren() {
+	for _, childName := range allChildren {
 		members, err := children.MemberSlice(childName)
 		if err != nil {
 			log.Fatalf("Failed to generate member slice for \"%s\": %v", childName, err)

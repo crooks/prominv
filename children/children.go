@@ -64,14 +64,15 @@ func (children Children) MemberSlice(childName string) (members []string, err er
 	return
 }
 
-// AddMember adds a host to a specific Child map.
-// There is no test for duplication in this method as it does no harm to attempt to add a host more than once.
-func (children Children) AddMember(childName, hostname string) (err error) {
-	child, ok := children[childName]
-	if !ok {
-		err = errChildNotFound
-		return
+// AddMember adds a member server to a specified Child group.  If the group doesn't exists, it will be created.
+func (children Children) AddMember(childName, hostName string) {
+	var child Child
+	if _, ok := children[childName]; ok {
+		child = children[childName]
+	} else {
+		child.Name = childName
+		child.Members = make(map[string]int)
+		children[childName] = child
 	}
-	child.Members[hostname] = 1
-	return
+	child.Members[hostName] = 1
 }

@@ -32,10 +32,7 @@ func TestNewChild(t *testing.T) {
 			t.Errorf("Error adding %s: %v", test.childName, err)
 		}
 		for _, member := range test.hostNames {
-			err = children.AddMember(test.childName, member)
-			if err != nil {
-				t.Error(err)
-			}
+			children.AddMember(test.childName, member)
 		}
 		outMembers, err := children.MemberSlice(test.childName)
 		if err != nil {
@@ -52,19 +49,52 @@ func TestNewChild(t *testing.T) {
 	} // Loop of tests
 }
 
-func TestNoChild(t *testing.T) {
-	var err error
+func TestGetAllChildren(t *testing.T) {
+	inChildren := []string{"abc", "def", "ghi"}
 	children := NewChildren()
-	err = children.AddMember("fakeChild", "host")
-	if err == nil {
-		t.Error("No error returned when adding to a non-existent child group")
-	} else if err != errChildNotFound {
-		t.Errorf("Expected an errChildNotFound but got %v", err)
+	for _, newChild := range inChildren {
+		children.AddChild(newChild)
 	}
-	_, err = children.MemberSlice("fakeChild")
-	if err == nil {
-		t.Error("No error returned when attempting to retrieve a non-existent child group")
-	} else if err != errChildNotFound {
-		t.Errorf("Expected an errChildNotFound but got %v", err)
+	outChildren := children.GetAllChildren()
+	if len(inChildren) != len(outChildren) {
+		t.Errorf("Unexpected number of Child records. Wanted: %d, Got: %d", len(inChildren), len(outChildren))
+	}
+	for _, ic := range inChildren {
+		matched := false
+		for _, oc := range outChildren {
+			if oc == ic {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			t.Errorf("Test element %s not found in AllChildren output", ic)
+			t.Errorf("%v vs. %v", inChildren, outChildren)
+		}
+	}
+}
+
+func TestNewMember(t *testing.T) {
+	inChild := "tc"
+	inMember := "tm"
+	children := NewChildren()
+	children.AddMember(inChild, inMember)
+
+	// This tests the GetChild function can return the created Child.
+	outChild, err := children.GetChild(inChild)
+	if err != nil {
+		t.Errorf("Child retrieval failed with: %v", err)
+	}
+	if outChild.Name != inChild {
+		t.Errorf("Unexpected child name.  Wanted: %s, Got: %s", inChild, outChild.Name)
+	}
+
+	// Pretty much the same test as above but this time recovering the Members of the Child.
+	members, err := children.MemberSlice(inChild)
+	if len(members) != 1 {
+		t.Errorf("Unexpected number of members in %s.  Should be 1 but have %d", inChild, len(members))
+	}
+	if members[0] != inMember {
+		t.Errorf("Unexpected member name in %s. Wanted: %s, Got: %s", inChild, inMember, members[0])
 	}
 }

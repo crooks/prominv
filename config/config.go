@@ -47,6 +47,7 @@ func init() {
 }
 
 func DoList() bool {
+	flag.Parse()
 	return flags.List
 }
 
