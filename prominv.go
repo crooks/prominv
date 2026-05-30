@@ -78,14 +78,9 @@ func makeInventory() {
 		if err != nil {
 			log.Fatalf("Failed to add %s to the \"prometheus\" group: %v", instance, err)
 		}
-		// If there's an "env" label, populate the prod/dev inventory groups
-		if env, ok := labels["env"]; ok {
-			if env == "prod" {
-				children.AddMember("prod", instance)
-			}
-			if env == "dev" {
-				children.AddMember("dev", instance)
-			}
+		// If there's an "groupBy" label, populate the prod/dev inventory groups
+		if groupBy, ok := labels[model.LabelName(cfg.Labels.GroupBy)]; ok {
+			children.AddMember(string(groupBy), instance)
 		}
 		// This conditional populates an "up" child group if the value of the "up" metric is 1.
 		if int(result.Value) == 1 {
@@ -94,8 +89,9 @@ func makeInventory() {
 
 		instanceEscaped := strings.Replace(instance, ".", "\\.", -1)
 		// Delete labels that we don't want to appear within the hostvars map
-		delete(labels, "instance")
-		delete(labels, "__name__")
+		for _, l := range cfg.Labels.Delete {
+			delete(labels, model.LabelName(l))
+		}
 		hostvarsKey := fmt.Sprintf("_meta.hostvars.%s", instanceEscaped)
 		inventory, err = sjson.Set(inventory, hostvarsKey, labels)
 	}

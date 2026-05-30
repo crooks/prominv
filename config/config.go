@@ -30,8 +30,12 @@ type Flags struct {
 }
 
 type Config struct {
-	Query string `yaml:"promql_query"`
-	URL   string `yaml:"prometheus_url"`
+	Query  string `yaml:"promql_query"`
+	URL    string `yaml:"prometheus_url"`
+	Labels struct {
+		Delete  []string `yaml:"delete"`
+		GroupBy string   `yaml:"group_by"`
+	}
 }
 
 var flags *Flags
@@ -93,6 +97,9 @@ func ParseConfig(fileName string) (*Config, error) {
 	// Set config defaults here
 	config.Query = getCfgItem(flags.Query, "PROMINVQUERY", config.Query, defaultQuery)
 	config.URL = getCfgItem(flags.URL, "PROMINVURL", config.URL, "")
+	if len(config.Labels.Delete) == 0 {
+		config.Labels.Delete = []string{"__name__", "instance"}
+	}
 
 	// Config failures
 	if config.URL == "" {
