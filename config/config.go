@@ -35,7 +35,7 @@ type Config struct {
 	Labels struct {
 		Delete  []string `yaml:"delete"`
 		GroupBy string   `yaml:"group_by"`
-	}
+	} `yaml:"labels"`
 }
 
 var flags *Flags
