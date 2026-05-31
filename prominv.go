@@ -82,8 +82,11 @@ func makeInventory() {
 		for _, groups := range cfg.Labels.GroupBy {
 			// If there's an "groupBy" label, populate an inventory group for it
 			if groupBy, ok := labels[model.LabelName(groups)]; ok {
-				// Make all group names lowercase and in the format <group_name>-<group_name_content>
-				groupName := fmt.Sprintf("%s-%s", strings.ToLower(groups), strings.ToLower(string(groupBy)))
+				// Hyphens are an invalid character in Ansible group names.
+				groupBySanitised := strings.ReplaceAll("-", "_", strings.ToLower(string(groupBy)))
+				groupNameSanitised := strings.ReplaceAll("-", "_", strings.ToLower(groups))
+				// Make all group names lowercase and in the format <group_name>_<group_name_content>
+				groupName := fmt.Sprintf("%s_%s", groupNameSanitised, groupBySanitised)
 				children.AddMember(groupName, instance)
 			}
 		}
@@ -101,6 +104,7 @@ func makeInventory() {
 		inventory, err = sjson.Set(inventory, hostvarsKey, labels)
 	}
 
+	// Passing "false" to GetAllChildren causes the "all" group to be excluded.  It shouldn't be a member of itself.
 	inventory, err = sjson.Set(inventory, "all.children", children.GetAllChildren(false))
 	if err != nil {
 		log.Fatalf("Failed to create all.children: %s", err)
