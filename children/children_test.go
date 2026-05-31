@@ -55,7 +55,7 @@ func TestGetAllChildren(t *testing.T) {
 	for _, newChild := range inChildren {
 		children.AddChild(newChild)
 	}
-	outChildren := children.GetAllChildren()
+	outChildren := children.GetAllChildren(true)
 	if len(inChildren) != len(outChildren) {
 		t.Errorf("Unexpected number of Child records. Wanted: %d, Got: %d", len(inChildren), len(outChildren))
 	}

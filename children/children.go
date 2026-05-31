@@ -42,9 +42,14 @@ func (children Children) GetChild(childName string) (Child, error) {
 	return child, nil
 }
 
-// getAllChildren returns a slice of all the keys in the Children map
-func (children Children) GetAllChildren() (c []string) {
+// getAllChildren returns a slice of all the keys in the Children map.
+// The "all" group can be excluded by setting includeAll=false.
+func (children Children) GetAllChildren(includeAll bool) (c []string) {
 	for k := range children {
+		// "all" is special and should not be a child of itself
+		if !includeAll && k == "all" {
+			continue
+		}
 		c = append(c, k)
 	}
 	sort.Strings(c)

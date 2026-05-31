@@ -101,18 +101,12 @@ func makeInventory() {
 		inventory, err = sjson.Set(inventory, hostvarsKey, labels)
 	}
 
-	allChildren := children.GetAllChildren()
-	inventory, err = sjson.Set(inventory, "all.children", allChildren)
+	inventory, err = sjson.Set(inventory, "all.children", children.GetAllChildren(false))
 	if err != nil {
 		log.Fatalf("Failed to create all.children: %s", err)
 	}
-	// all is special and shouldn't be a child of itself
-	inventory, err = sjson.Delete(inventory, "all.children.all")
-	if err != nil {
-		log.Fatalf("Failed to delete all.children.all: %v", err)
-	}
 	// Iterate over the child groups and add the members to them
-	for _, childName := range allChildren {
+	for _, childName := range children.GetAllChildren(true) {
 		members, err := children.MemberSlice(childName)
 		if err != nil {
 			log.Fatalf("Failed to generate member slice for \"%s\": %v", childName, err)
