@@ -83,8 +83,8 @@ func makeInventory() {
 			// If there's an "groupBy" label, populate an inventory group for it
 			if groupBy, ok := labels[model.LabelName(groups)]; ok {
 				// Hyphens are an invalid character in Ansible group names.
-				groupBySanitised := strings.ReplaceAll("-", "_", strings.ToLower(string(groupBy)))
-				groupNameSanitised := strings.ReplaceAll("-", "_", strings.ToLower(groups))
+				groupBySanitised := strings.ReplaceAll(strings.ToLower(string(groupBy)), "-", "_")
+				groupNameSanitised := strings.ReplaceAll(strings.ToLower(groups), "-", "_")
 				// Make all group names lowercase and in the format <group_name>_<group_name_content>
 				groupName := fmt.Sprintf("%s_%s", groupNameSanitised, groupBySanitised)
 				children.AddMember(groupName, instance)
