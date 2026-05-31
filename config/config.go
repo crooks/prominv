@@ -34,7 +34,7 @@ type Config struct {
 	URL    string `yaml:"prometheus_url"`
 	Labels struct {
 		Delete  []string `yaml:"delete"`
-		GroupBy string   `yaml:"group_by"`
+		GroupBy []string `yaml:"group_by"`
 	} `yaml:"labels"`
 }
 

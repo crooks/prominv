@@ -78,11 +78,14 @@ func makeInventory() {
 		if err != nil {
 			log.Fatalf("Failed to add %s to the \"prometheus\" group: %v", instance, err)
 		}
-		// If there's an "groupBy" label, populate an inventory group for it
-		if groupBy, ok := labels[model.LabelName(cfg.Labels.GroupBy)]; ok {
-			// Make all group names lowercase and in the format <group_name>-<group_name_content>
-			groupName := fmt.Sprintf("%s-%s", strings.ToLower(cfg.Labels.GroupBy), strings.ToLower(string(groupBy)))
-			children.AddMember(groupName, instance)
+		// Iterate over the GroupBy labels defined in the Config
+		for _, groups := range cfg.Labels.GroupBy {
+			// If there's an "groupBy" label, populate an inventory group for it
+			if groupBy, ok := labels[model.LabelName(groups)]; ok {
+				// Make all group names lowercase and in the format <group_name>-<group_name_content>
+				groupName := fmt.Sprintf("%s-%s", strings.ToLower(groups), strings.ToLower(string(groupBy)))
+				children.AddMember(groupName, instance)
+			}
 		}
 		// This conditional populates an "up" child group if the value of the "up" metric is 1.
 		if int(result.Value) == 1 {
