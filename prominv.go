@@ -6,6 +6,7 @@ import (
 	"gitlab/prominv/children"
 	"gitlab/prominv/config"
 	"log"
+	"maps"
 	"os"
 	"strings"
 	"time"
@@ -64,6 +65,11 @@ func makeInventory() {
 		log.Fatal(err)
 	}
 	results := runPromQL(cfg.Query)
+	// In the world of Ansible, some variable names are reserved.  This list is far from exhaustive!
+	labelsReplace := map[string]string{
+		"notify":      "notify_team",
+		"environment": "env",
+	}
 	// Iterate over the returned metrics
 	for _, result := range results {
 		labels := result.Metric
@@ -73,6 +79,15 @@ func makeInventory() {
 			continue
 		}
 		instance := string(labels["instance"])
+		// Take a clone of labels to iterate over as it's going to be modified in-situ.
+		for l := range maps.Clone(labels) {
+			replaceWith, ok := labelsReplace[string(l)]
+			if ok {
+				// A label is in the reserved list. Create a replacement and then delete the original.
+				labels[model.LabelName(replaceWith)] = labels[l]
+				delete(labels, l)
+			}
+		}
 		// All instances get added to the prometheus child group
 		children.AddMember("all", instance)
 		if err != nil {
