@@ -80,8 +80,8 @@ func makeInventory() {
 		}
 		// If there's an "groupBy" label, populate an inventory group for it
 		if groupBy, ok := labels[model.LabelName(cfg.Labels.GroupBy)]; ok {
-			// Make all group names lowercase
-			groupName := strings.ToLower(string(groupBy))
+			// Make all group names lowercase and in the format <group_name>-<group_name_content>
+			groupName := fmt.Sprintf("%s-%s", strings.ToLower(cfg.Labels.GroupBy), strings.ToLower(string(groupBy)))
 			children.AddMember(groupName, instance)
 		}
 		// This conditional populates an "up" child group if the value of the "up" metric is 1.
