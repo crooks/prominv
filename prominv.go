@@ -74,7 +74,7 @@ func makeInventory() {
 		}
 		instance := string(labels["instance"])
 		// All instances get added to the prometheus child group
-		children.AddMember("prometheus", instance)
+		children.AddMember("all", instance)
 		if err != nil {
 			log.Fatalf("Failed to add %s to the \"prometheus\" group: %v", instance, err)
 		}
@@ -103,6 +103,14 @@ func makeInventory() {
 
 	allChildren := children.GetAllChildren()
 	inventory, err = sjson.Set(inventory, "all.children", allChildren)
+	if err != nil {
+		log.Fatalf("Failed to create all.children: %s", err)
+	}
+	// all is special and shouldn't be a child of itself
+	inventory, err = sjson.Delete(inventory, "all.children.all")
+	if err != nil {
+		log.Fatalf("Failed to delete all.children.all: %v", err)
+	}
 	// Iterate over the child groups and add the members to them
 	for _, childName := range allChildren {
 		members, err := children.MemberSlice(childName)
