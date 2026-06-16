@@ -38,7 +38,7 @@ The metric contains an **env** label but not a **site** label.  The instance nam
 
 ## Command-line Flags
 The configuration file described above can be overridden using command-line flags.
-**-config** The path to a configuration file.  The default is: /etc/prominv/config.yml.
-**-query** This overrides the **promql_query** config option. You might need to escape reeserved characters when specifying this flag.
-**-url** The URL to query.  This overrides the **prometheus_url** config option.
-**-list** This is a special flag that is required by Ansible when using a Dynamic Inventory. Without it, nothing happens.
+* **-config** The path to a configuration file.  The default is: /etc/prominv/config.yml.
+* **-query** This overrides the **promql_query** config option. You might need to escape reeserved characters when specifying this flag.
+* **-url** The URL to query.  This overrides the **prometheus_url** config option.
+* **-list** This is a special flag that is required by Ansible when using a Dynamic Inventory. Without it, nothing happens.
