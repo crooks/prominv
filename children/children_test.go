@@ -74,6 +74,21 @@ func TestGetAllChildren(t *testing.T) {
 	}
 }
 
+func TestDelChild(t *testing.T) {
+	inChildren := []string{"abc", "def", "ghi"}
+	children := NewChildren()
+	for _, newChild := range inChildren {
+		children.AddChild(newChild)
+	}
+	err := children.DelChild("ghi")
+	if err != nil {
+		t.Fatalf("DelChild returned an unexpected error: %v", err)
+	}
+	if len(children) != 2 {
+		t.Errorf("Unexpected number of children.  Expected=2, Got=%d", len(children))
+	}
+}
+
 func TestNewMember(t *testing.T) {
 	inChild := "tc"
 	inMember := "tm"

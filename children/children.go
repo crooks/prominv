@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	errChildNotFound error = errors.New("child Not Found")
+	errChildNotFound error = errors.New("child not found")
 	errChildExists   error = errors.New("child already exists")
 )
 
@@ -31,6 +31,16 @@ func (children Children) AddChild(childName string) error {
 	child.Name = childName
 	child.Members = make(map[string]int)
 	children[childName] = *child
+	return nil
+}
+
+// DelChild deletes a Child group from the children map.  If the child does not exist, an error is returned.
+func (children Children) DelChild(childName string) error {
+	_, ok := children[childName]
+	if !ok {
+		return errChildNotFound
+	}
+	delete(children, childName)
 	return nil
 }
 
