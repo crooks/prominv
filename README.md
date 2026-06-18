@@ -36,6 +36,9 @@ Using the following configuration:
 
 The metric contains an **env** label but not a **site** label.  The instance name **webserver01** would be added to a child group of: **env_dev**.
 
+### Bool Child Groups
+In addition to the Child Groups described above, there are also **bool0** & **bool1** groups that will be populated is the returned metric values all meet the criteria of 0 or 1.  An example of this would be the default query **up{job="node"}**.  In this instance, the up/reachable nodes will be put into the **bool1** group and the unreachable/down nodes would be put into the **bool0**.  These Child Groups will only exist if all of the returned metrics meet the 0 or 1 requirement.
+
 ## Command-line Flags
 The configuration file described above can be overridden using command-line flags.
 * **-config** The path to a configuration file.  The default is: /etc/prominv/config.yml.
