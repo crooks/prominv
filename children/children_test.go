@@ -75,17 +75,25 @@ func TestGetAllChildren(t *testing.T) {
 }
 
 func TestDelChild(t *testing.T) {
+	var err error
 	inChildren := []string{"abc", "def", "ghi"}
 	children := NewChildren()
 	for _, newChild := range inChildren {
 		children.AddChild(newChild)
 	}
-	err := children.DelChild("ghi")
+	err = children.DelChild("ghi")
 	if err != nil {
 		t.Fatalf("DelChild returned an unexpected error: %v", err)
 	}
 	if len(children) != 2 {
 		t.Errorf("Unexpected number of children.  Expected=2, Got=%d", len(children))
+	}
+	// Test an error is returned when a non-existant key is selected
+	err = children.DelChild("ghi")
+	if err == nil {
+		t.Error("No error returned when removing non-existant key")
+	} else if err != errChildNotFound {
+		t.Errorf("Received unexpected error: %v", err)
 	}
 }
 
