@@ -34,14 +34,12 @@ func (children Children) AddChild(childName string) error {
 	return nil
 }
 
-// DelChild deletes a Child group from the children map.  If the child does not exist, an error is returned.
-func (children Children) DelChild(childName string) error {
+// DelChild deletes a Child group from the children map.  If the child does not exist, nothing is done.
+func (children Children) DelChild(childName string) {
 	_, ok := children[childName]
-	if !ok {
-		return errChildNotFound
+	if ok {
+		delete(children, childName)
 	}
-	delete(children, childName)
-	return nil
 }
 
 func (children Children) GetChild(childName string) (Child, error) {

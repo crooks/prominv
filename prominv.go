@@ -70,6 +70,8 @@ func makeInventory() {
 		"notify":      "notify_team",
 		"environment": "env",
 	}
+	// isBoolValue will remain true until a non-boolean metric value is identified
+	isBoolValue := true
 	// Iterate over the returned metrics
 	for _, result := range results {
 		labels := result.Metric
@@ -88,10 +90,10 @@ func makeInventory() {
 				delete(labels, l)
 			}
 		}
-		// All instances get added to the prometheus child group
+		// All instances get added to the "all" child group
 		children.AddMember("all", instance)
 		if err != nil {
-			log.Fatalf("Failed to add %s to the \"prometheus\" group: %v", instance, err)
+			log.Fatalf("Failed to add %s to the \"all\" group: %v", instance, err)
 		}
 		// Iterate over the GroupBy labels defined in the Config
 		for _, groups := range cfg.Labels.GroupBy {
@@ -105,10 +107,22 @@ func makeInventory() {
 				children.AddMember(groupName, instance)
 			}
 		}
-		// This conditional populates an "up" child group if the value of the "up" metric is 1.
-		if int(result.Value) == 1 {
-			children.AddMember("up", instance)
-		}
+		// isBoolValue is flag that will remain true providing the query results are all 0 or 1.
+		if isBoolValue {
+			// These conditionals populate "bool0" & "bool1" Child groups if the value of the metric is boolean.
+			switch result.Value {
+			case 0:
+				children.AddMember("bool0", instance)
+			case 1:
+				children.AddMember("bool1", instance)
+			default:
+				// The result is a non-Boolean. The assumption is made that the metric does not meet the 0 or 1
+				// requirement so the associated Child group is deleted and no more instances will be added to it.
+				children.DelChild("bool0")
+				children.DelChild("bool1")
+				isBoolValue = false
+			} // End of Switch
+		} // End of isBoolValue
 
 		instanceEscaped := strings.Replace(instance, ".", "\\.", -1)
 		// Delete labels that we don't want to appear within the hostvars map
